@@ -79,8 +79,8 @@ contract UniV3ForkFixture is Test {
     // NOTE: Change this to change rest of settings
     // Run with: TODO
 
-    uint256 constant BTC_IN = 5_000e18; // 5e18 eBTC
-    uint256 constant BTC_TO_ETH = 19.0746e18; // 1 eBTC is worth 19+ ETH
+    uint256 constant EBTC_IN = 5_000e18; // 5e18 eBTC
+    uint256 constant EBTC_TO_WBTC = 1e18; // 1 to 1
     int24 constant TICK_SPACING = 60; // Souce: Docs
     int24 constant TICK_RANGE_MULTIPLIER = 18; // 1.0001^1000 = around 10%, which is sloppy enough, for conc liquidity
     // 18 * 60 = 1080 so it's close to it
@@ -138,7 +138,7 @@ contract UniV3ForkFixture is Test {
         // Initialize here
         // Use translator to find price
         // TODO: WHY???
-        uint160 priceAtRatio = translator.getSqrtRatioAtTick(29500);
+        uint160 priceAtRatio = translator.getSqrtRatioAtTick(0);
         IUnIV3Pool(newPool).initialize(priceAtRatio);
 
         // LP here
@@ -266,15 +266,15 @@ contract UniV3ForkFixture is Test {
         vm.revertTo(snapshot);
     }
 
-    function testDeployOne() public {
+    function testStableUniV3() public {
         vm.snapshot(); // add this here to avoid reverting to zero
 
-        uint256 ETH_IN = BTC_IN * BTC_TO_ETH / 1e18; // Decimals
-        console2.log("BTC_IN", BTC_IN);
-        console2.log("ETH_IN", ETH_IN);
+        uint256 WBTC_IN = EBTC_IN * EBTC_TO_WBTC / 1e18; // Decimals
+        console2.log("EBTC_IN", EBTC_IN);
+        console2.log("WBTC_IN", WBTC_IN);
 
         // Deploy a Pool, with 1/1 LP in, and 1 tick left and 1 tick right from the middle
-        (address newPool, address token0, address token1) = _createNewPool(ETH_IN, BTC_IN, TICK_RANGE_MULTIPLIER, TICK_RANGE_MULTIPLIER);
+        (address newPool, address token0, address token1) = _createNewPool(WBTC_IN, EBTC_IN, TICK_RANGE_MULTIPLIER, TICK_RANGE_MULTIPLIER);
 
         int24 middleTick = (IUnIV3Pool(newPool).slot0()).tick / TICK_SPACING * TICK_SPACING; // Avoid non %
 
@@ -287,14 +287,14 @@ contract UniV3ForkFixture is Test {
         console2.log("tickFromPool", middleTick);
 
         // Swap Here
-        // token0 is BTC
+        // eBTC to wBTC
         _swapAndRevert(newPool, token0, token1, 100e18);
         _swapAndRevert(newPool, token0, token1, 1_000e18);
         _swapAndRevert(newPool, token0, token1, 2_000e18);
         _swapAndRevert(newPool, token0, token1, 5_000e18);
         _swapAndRevert(newPool, token0, token1, 10_000e18);
 
-        // ETH to BTC
+        // wBTC to eBTC
         _swapAndRevert(newPool, token1, token0, 100e18);
         _swapAndRevert(newPool, token1, token0, 1_000e18);
         _swapAndRevert(newPool, token1, token0, 2_000e18);

@@ -45,6 +45,7 @@ interface IPool {
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);
     function get_virtual_price() external view returns (uint256);
     function coins(uint256) external view returns (address);
+    function balances(uint256) external view returns (uint256);
 }
 
 contract CurveStable is Test {
@@ -70,7 +71,7 @@ contract CurveStable is Test {
 
         address[4] memory tokens = [address(tokenA), address(tokenB), address(0), address(0)];
 
-        factory.deploy_plain_pool("w/e", "WE", tokens, A, STABLE_FEES, ETH_TYPE);
+        factory.deploy_plain_pool("w/e", "WE", tokens, A, STABLE_FEES, BTC_TYPE);
     }
 
     function _setupNewTwoTokenPool(
@@ -101,186 +102,68 @@ contract CurveStable is Test {
         return (newPool, address(tokenA), address(tokenB));
     }
 
-    struct ThreeTokens {
-        uint256 amountA;
-        uint8 decimalsA;
-        uint256 amountB;
-        uint8 decimalsB;
-        uint256 amountC;
-        uint8 decimalsC;
-    }
 
-    function _setupNewThreeTokenPool(ThreeTokens memory threeTokens, uint256 aValue, uint256 fees, uint256 poolType)
-        internal
-        returns (address newPool, address firstToken, address secondToken, address thirdToken)
-    {
-        // Deploy 2 mock tokens
-        vm.startPrank(owner);
-        tERC20 tokenA = new tERC20("A", "A", threeTokens.decimalsA);
-        tERC20 tokenB = new tERC20("B", "B", threeTokens.decimalsB);
-        tERC20 tokenC = new tERC20("C", "C", threeTokens.decimalsC);
+    function test_eBTC_wBTC() public {
+        console2.log("Creating eBTC-wBTC Pool");
+        uint256 EBTC_IN = 5_000e18;
+        uint8 EBTC_DECIMALS = 18;
 
-        address[4] memory tokens = [address(tokenA), address(tokenB), address(tokenC), address(0)];
-        newPool = factory.deploy_plain_pool("w/e", "WE", tokens, aValue, fees, poolType);
-        {
-            tokenA.approve(newPool, threeTokens.amountA);
-            tokenB.approve(newPool, threeTokens.amountB);
-            tokenC.approve(newPool, threeTokens.amountC);
-        }
-
-        uint256[3] memory amountsToAdd = [threeTokens.amountA, threeTokens.amountB, threeTokens.amountC];
-        IPool(newPool).add_liquidity(amountsToAdd, 0);
-
-        return (newPool, address(tokenA), address(tokenB), address(tokenC));
-    }
-
-    function test_wstETH_ETH() public {
-        console2.log("Creating wstETH-ETH Pool");
-        // https://optimistic.etherscan.io/address/0xB90B9B1F91a01Ea22A182CD84C1E22222e39B415#readContract
-        // Balance 0 is ETH, balance 1 is wstETH
-        uint256 WSTETH_IN = 4540302536030246428213;
-        uint8 WSTETH_DECIMALS = 18;
-
-        uint256 WETH_IN = 5110270280714989617844;
-        uint8 WETH_DECIMALS = 18;
+        uint256 WBTC_IN = 5_000e8;
+        uint8 WBTC_DECIMALS = 8;
 
         // This is to adjust price
         // ORACLE for proper math
         // https://optimistic.etherscan.io/address/0xe59eba0d492ca53c6f46015eea00517f2707dc77#readContract
         IOracle oracle = IOracle(0xe59EBa0D492cA53C6f46015EEa00517F2707dc77);
 
-        (address curvePool, address WSTETH, address WETH) =
-            _setupNewTwoTokenPool(WSTETH_IN, WSTETH_DECIMALS, WETH_IN, WETH_DECIMALS, A, STABLE_FEES, ETH_TYPE);
+        (address curvePool, address EBTC, address WBTC) =
+            _setupNewTwoTokenPool(EBTC_IN, EBTC_DECIMALS, WBTC_IN, WBTC_DECIMALS, A, STABLE_FEES, BTC_TYPE);
 
-        // Let's do amounts and swaps
-        uint256[] memory amountsFromWSTETH = new uint256[](5);
-        amountsFromWSTETH[0] = _addDecimals(1, WSTETH_DECIMALS);
-        amountsFromWSTETH[1] = _addDecimals(10, WSTETH_DECIMALS);
-        amountsFromWSTETH[2] = _addDecimals(1000, WSTETH_DECIMALS);
-        amountsFromWSTETH[3] = _addDecimals(10_000, WSTETH_DECIMALS);
-        amountsFromWSTETH[4] = _addDecimals(100_000, WSTETH_DECIMALS);
+        _showTheSwap(curvePool, 0, 1, 1e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 10e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 100e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 1_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 2_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 3_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 4_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 5_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 6_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 7_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 8_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 9_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, 10_000e18, EBTC, WBTC);
 
-        IPool asPool = IPool(curvePool);
-
-        console2.log("wstETH", WSTETH);
-        console2.log("coins0", asPool.coins(0));
-        console2.log("coins1", asPool.coins(1));
-        for (uint256 i; i < amountsFromWSTETH.length; i++) {
-            uint256 amountIn = amountsFromWSTETH[i];
-            console2.log("WSTETH i", i);
-            console2.log("WSTETH amountIn", amountIn);
-            uint256 dy = asPool.get_dy(0, 1, amountIn);
-            console2.log("WSTETH amountOut", dy);
-            // NOTE: We adjust the price here, this math is incorrect but by a << 1/10_000 margin of error
-            console2.log("WSTETH amountOut adjusted", dy * oracle.latestAnswer() / 1e18);
-        }
+        console2.log("");
+        console2.log("");
+        _showTheSwap(curvePool, 1, 0, 1e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 10e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 100e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 1_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 2_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 3_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 4_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 5_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 6_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 7_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 8_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 9_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, 10_000e8, EBTC, WBTC);
     }
 
-    // For Four Pool we will use 3 pool and apply the rate as well,
-    // As the rate change is basically a virtual_price of difference, meaning that we should be accurate within a reasonable margin of error
-    function test_sUSD_3Pool() public {
-        console2.log("Creating  sUSD3Pool");
-        // https://optimistic.etherscan.io/address/0x061b87122Ed14b9526A813209C8a59a633257bAb
-        // 0 sUSD
-        // 0x8c6f28f2F1A3C87F0f938b96d27520d9751ec8d9
-        // 1 is 3Pool
-        uint256 SUSD_IN = 10499034674015099569330803;
-        uint8 SUSD_DECIMALS = 18;
+    function _showTheSwap(address pool, int128 i, int128 j, uint256 amtIn, address EBTC, address WBTC) internal {
+        IPool asPool = IPool(pool);
 
-        uint256 THREE_POOL_IN = 8503345729124878946468884;
-        uint8 THREE_POOL_DECIMALS = 18;
+        console2.log("");
+        console2.log("");
+        console2.log("amtIn", amtIn);
+        console2.log("tokenIn", i == 0 ? "eBTC" : "wBTC");
+        uint256 amtOut = asPool.get_dy(i, j, amtIn);
+        console2.log("Amount Out", amtOut);
 
-        (address curvePool, address SUSD, address THREE_POOL) = _setupNewTwoTokenPool(
-            SUSD_IN, SUSD_DECIMALS, THREE_POOL_IN, THREE_POOL_DECIMALS, A_FOUR_POOL, STABLE_FEES, USD_TYPE
-        );
-
-        // TO ADJUST
-        // https://optimistic.etherscan.io/address/0x1337BedC9D22ecbe766dF105c9623922A27963EC
-        IPool toAdjust = IPool(0x1337BedC9D22ecbe766dF105c9623922A27963EC);
-
-        // Let's do amounts and swaps
-        uint256[] memory amountsFromSUSD = new uint256[](5);
-        amountsFromSUSD[0] = _addDecimals(100, SUSD_DECIMALS);
-        amountsFromSUSD[1] = _addDecimals(10_000, SUSD_DECIMALS);
-        amountsFromSUSD[2] = _addDecimals(150_000, SUSD_DECIMALS);
-        amountsFromSUSD[3] = _addDecimals(2_000_000, SUSD_DECIMALS);
-        amountsFromSUSD[4] = _addDecimals(15_000_000, SUSD_DECIMALS);
-
-        IPool asPool = IPool(curvePool);
-        for (uint256 i; i < amountsFromSUSD.length; i++) {
-            uint256 amountIn = amountsFromSUSD[i];
-            console2.log("sUSD i", i);
-            console2.log("sUSD amountIn", amountIn);
-            uint256 dy = asPool.get_dy(0, 1, amountIn);
-            console2.log("sUSD amountOut of 3CRV", dy);
-            // NOTE: It's a negative adjustment // Also doesn't include the fees from the other pool
-            console2.log("sUSD amountOut of 3CRV Adjust by Virtual Price", dy * 1e18 / toAdjust.get_virtual_price());
-        }
+        console2.log("reserve i vs amtOut as %", asPool.balances(uint256(int256(j))) * 100 / amtOut);
     }
-    // From sUSD to 3 Pool is one thing
-    // From 3Pool to 3Pool is this one
 
-    function test_3Pool() public {
-        console2.log("Creating 3 Pool");
-        // https://optimistic.etherscan.io/address/0x1337BedC9D22ecbe766dF105c9623922A27963EC#readContract
-        // Balance 0 is DAI
-        // Balance 1 is USDC
-        // Balance 2 is USDT
 
-        uint256 DAI_IN = 5105490430369593570566334;
-        uint8 DAI_DECIMALS = 18;
-
-        uint256 USDC_IN = 2899439195495;
-        uint8 USDC_DECIMALS = 6;
-
-        uint256 USDT_IN = 1759099131964;
-        uint8 USDT_DECIMALS = 6;
-
-        // NOTE: We must normalize the weights
-        uint256 ADJUSTED_DAI = DAI_IN * 10 ** USDC_DECIMALS / 10 ** DAI_DECIMALS;
-
-        // NOTE: Technically fee is 1 bps but we cannot do it via the factory
-        (address curvePool,,,) = _setupNewThreeTokenPool(
-            ThreeTokens(ADJUSTED_DAI, USDC_DECIMALS, USDC_IN, USDC_DECIMALS, USDT_IN, USDT_DECIMALS), 2000, STABLE_FEES, USD_TYPE
-        );
-
-        // Let's do amounts and swaps
-        uint256[] memory amountsFromDAI = new uint256[](5);
-        amountsFromDAI[0] = _addDecimals(100, USDC_DECIMALS);
-        amountsFromDAI[1] = _addDecimals(10_000, USDC_DECIMALS);
-        amountsFromDAI[2] = _addDecimals(150_000, USDC_DECIMALS);
-        amountsFromDAI[3] = _addDecimals(2_000_000, USDC_DECIMALS);
-        amountsFromDAI[4] = _addDecimals(15_000_000, USDC_DECIMALS);
-
-        IPool asPool = IPool(curvePool);
-
-        for (uint256 i; i < amountsFromDAI.length; i++) {
-            uint256 amountIn = amountsFromDAI[i];
-            console2.log("DAI i", i);
-            console2.log("DAI amountIn (normalized)", amountIn);
-            console2.log("DAI amountIn real", amountIn * 10 ** DAI_DECIMALS / 10 ** USDC_DECIMALS);
-            uint256 dy = asPool.get_dy(0, 1, amountIn);
-            console2.log("dAI amountOut of USDC", dy);
-            console2.log("DAI amountOut of USDC adjusted for fees", dy * 10003 / 10000);
-        }
-
-        // Let's do amounts and swaps
-        uint256[] memory amountsFromUSDC = new uint256[](5);
-        amountsFromUSDC[0] = _addDecimals(100, USDC_DECIMALS);
-        amountsFromUSDC[1] = _addDecimals(10_000, USDC_DECIMALS);
-        amountsFromUSDC[2] = _addDecimals(150_000, USDC_DECIMALS);
-        amountsFromUSDC[3] = _addDecimals(2_000_000, USDC_DECIMALS);
-        amountsFromUSDC[4] = _addDecimals(15_000_000, USDC_DECIMALS);
-
-        for (uint256 i; i < amountsFromUSDC.length; i++) {
-            uint256 amountIn = amountsFromUSDC[i];
-            console2.log("USDC i", i);
-            console2.log("USDC amountIn", amountIn);
-            uint256 dy = asPool.get_dy(1, 2, amountIn);
-            console2.log("USDC amountOut of USDT", dy);
-            console2.log("USDC amountOut of USDT adjusted for fees", dy * 10003 / 10000);
-        }
-    }
 
     function _addDecimals(uint256 value, uint256 decimals) internal pure returns (uint256) {
         return value * 10 ** decimals;

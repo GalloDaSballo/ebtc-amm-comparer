@@ -108,8 +108,8 @@ contract CurveStable is Test {
         uint256 EBTC_IN = 5_000e18;
         uint8 EBTC_DECIMALS = 18;
 
-        uint256 WBTC_IN = 5_000e8;
-        uint8 WBTC_DECIMALS = 8;
+        uint256 WBTC_IN = 5_000e18;
+        uint8 WBTC_DECIMALS = 18;
 
         // This is to adjust price
         // ORACLE for proper math
@@ -119,35 +119,35 @@ contract CurveStable is Test {
         (address curvePool, address EBTC, address WBTC) =
             _setupNewTwoTokenPool(EBTC_IN, EBTC_DECIMALS, WBTC_IN, WBTC_DECIMALS, A, STABLE_FEES, BTC_TYPE);
 
-        _showTheSwap(curvePool, 0, 1, 1e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 10e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 100e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 1_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 2_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 3_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 4_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 5_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 6_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 7_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 8_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 9_000e18, EBTC, WBTC);
-        _showTheSwap(curvePool, 0, 1, 10_000e18, EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(1, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(10, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(100, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(1_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(2_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(3_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(4_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(5_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(6_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(7_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(8_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(9_000, EBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 0, 1, _addDecimals(10_000, EBTC_DECIMALS), EBTC, WBTC);
 
         console2.log("");
         console2.log("");
-        _showTheSwap(curvePool, 1, 0, 1e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 10e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 100e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 1_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 2_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 3_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 4_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 5_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 6_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 7_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 8_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 9_000e8, EBTC, WBTC);
-        _showTheSwap(curvePool, 1, 0, 10_000e8, EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(1, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(10, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(100, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(1_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(2_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(3_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(4_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(5_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(6_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(7_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(8_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(9_000, WBTC_DECIMALS), EBTC, WBTC);
+        _showTheSwap(curvePool, 1, 0, _addDecimals(10_000, WBTC_DECIMALS), EBTC, WBTC);
     }
 
     function _showTheSwap(address pool, int128 i, int128 j, uint256 amtIn, address EBTC, address WBTC) internal {
@@ -160,7 +160,7 @@ contract CurveStable is Test {
         uint256 amtOut = asPool.get_dy(i, j, amtIn);
         console2.log("Amount Out", amtOut);
 
-        console2.log("reserve i vs amtOut as %", asPool.balances(uint256(int256(j))) * 100 / amtOut);
+        console2.log("amtOut * 100 / amtIn", amtOut * 100 / amtIn);
     }
 
 

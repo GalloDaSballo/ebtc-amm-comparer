@@ -82,7 +82,7 @@ contract UniV3ForkFixture is Test {
     uint256 constant EBTC_IN = 5_000e18; // 5e18 eBTC
     uint256 constant EBTC_TO_WBTC = 1e18; // 1 to 1
     int24 constant TICK_SPACING = 60; // Souce: Docs
-    int24 constant TICK_RANGE_MULTIPLIER = 18; // 1.0001^1000 = around 10%, which is sloppy enough, for conc liquidity
+    int24 constant TICK_RANGE_MULTIPLIER = 2; // 1.0001^1000 = around 10%, which is sloppy enough, for conc liquidity
     // 18 * 60 = 1080 so it's close to it
 
     // Given these we will calculate the amount of ETH
@@ -255,6 +255,7 @@ contract UniV3ForkFixture is Test {
         console2.log("amountIn", amountIn);
         console2.log("tokenOut", tokenOut);
         console2.log("amountOut", amountOut);
+        console2.log("amountOut * 100 / amountIn", amountOut * 100 / amountIn);
         vm.stopPrank();
     }
 
@@ -291,16 +292,27 @@ contract UniV3ForkFixture is Test {
         _swapAndRevert(newPool, token0, token1, 100e18);
         _swapAndRevert(newPool, token0, token1, 1_000e18);
         _swapAndRevert(newPool, token0, token1, 2_000e18);
+        _swapAndRevert(newPool, token0, token1, 3_000e18);
+        _swapAndRevert(newPool, token0, token1, 4_000e18);
         _swapAndRevert(newPool, token0, token1, 5_000e18);
+        _swapAndRevert(newPool, token0, token1, 6_000e18);
+        _swapAndRevert(newPool, token0, token1, 7_000e18);
+        _swapAndRevert(newPool, token0, token1, 8_000e18);
+        _swapAndRevert(newPool, token0, token1, 9_000e18);
         _swapAndRevert(newPool, token0, token1, 10_000e18);
 
         // wBTC to eBTC
         _swapAndRevert(newPool, token1, token0, 100e18);
         _swapAndRevert(newPool, token1, token0, 1_000e18);
         _swapAndRevert(newPool, token1, token0, 2_000e18);
+        _swapAndRevert(newPool, token1, token0, 3_000e18);
+        _swapAndRevert(newPool, token1, token0, 4_000e18);
         _swapAndRevert(newPool, token1, token0, 5_000e18);
+        _swapAndRevert(newPool, token1, token0, 6_000e18);
+        _swapAndRevert(newPool, token1, token0, 7_000e18);
+        _swapAndRevert(newPool, token1, token0, 8_000e18);
+        _swapAndRevert(newPool, token1, token0, 9_000e18);
         _swapAndRevert(newPool, token1, token0, 10_000e18);
-        _swapAndRevert(newPool, token1, token0, 100_000e18);
 
 
         // Determine Price from Tick0

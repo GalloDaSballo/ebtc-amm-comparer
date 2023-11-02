@@ -16,13 +16,14 @@ interface IFactory {
     function create(
         string memory name,
         string memory symbol,
-        address[] memory tokens, // TokenA and B
-        uint256 amplificationParameter, // 570
-        address[] memory rateProviders, // Fake rate providers
-        uint256[] memory tokenRateCacheDurations, // 1800
-        bool[] memory exemptFromYieldProtocolFeeFlags, // false false
-        uint256 swapFeePercentage, // 100000000000000
-        address owner // address(0)
+        address[] memory tokens,
+        uint256 amplificationParameter,
+        address[] memory rateProviders,
+        uint256[] memory tokenRateCacheDurations,
+        bool exemptFromYieldProtocolFeeFlag,
+        uint256 swapFeePercentage,
+        address owner,
+        bytes32 salt
     ) external returns (address);
 }
 // Token A
@@ -51,6 +52,13 @@ interface IPool {
     enum SwapKind {
         GIVEN_IN,
         GIVEN_OUT
+    }
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
     }
 
     struct BatchSwapStep {
@@ -95,7 +103,7 @@ interface IPool {
 contract BalancerStable is Test {
     uint256 MAX_BPS = 10_000;
 
-    IFactory factory = IFactory(0xe2E901AB09f37884BA31622dF3Ca7FC19AA443Be);
+    IFactory factory = IFactory(0x043A2daD730d585C44FB79D2614F295D2d625412);
     IPool vault = IPool(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     bytes32 SPECIALIZATION_MASK = 0x000000000000000000000000000000000000000000020000000000000000008b;
@@ -145,12 +153,8 @@ contract BalancerStable is Test {
             durations[0] = 1800;
             durations[1] = 1800;
 
-            bool[] memory set = new bool[](2);
-            set[0] = false;
-            set[1] = false;
-
             // Deploy new pool
-            newPool = factory.create("Pool", "POOL", tokens, 570, rates, durations, set, 100000000000000, address(0));
+            newPool = factory.create("Pool", "POOL", tokens, 2000, rates, durations, false, 100000000000000, address(0), bytes32(uint256(123)));
         }
 
         poolId = IPool(newPool).getPoolId();
@@ -160,17 +164,16 @@ contract BalancerStable is Test {
         console2.log("setupPoolTokens", setupPoolTokens.length);
         console2.log("setupPoolTokens", setupPoolTokens[0]);
         console2.log("setupPoolTokens", setupPoolTokens[1]);
-        console2.log("setupPoolTokens", setupPoolTokens[2]);
         {
             tokenA.approve(address(vault), settings.amountA);
             tokenB.approve(address(vault), settings.amountB);
 
-            address[] memory assets = new address[](3);
+            address[] memory assets = new address[](2);
             assets[0] = setupPoolTokens[0];
             assets[1] = setupPoolTokens[1];
-            assets[2] = setupPoolTokens[2];
 
-            uint256[] memory amountsToAdd = new uint256[](3);
+
+            uint256[] memory amountsToAdd = new uint256[](2);
             amountsToAdd[0] = setupPoolTokens[0] == address(tokenA)
                 ? settings.amountA
                 : setupPoolTokens[0] == address(tokenB) ? settings.amountB : 1e18;
@@ -181,45 +184,46 @@ contract BalancerStable is Test {
                 : setupPoolTokens[1] == address(tokenB) ? settings.amountB : 1e18;
             console2.log("amountsToAdd[1]", amountsToAdd[1]);
 
-            amountsToAdd[2] = setupPoolTokens[2] == address(tokenA)
-                ? settings.amountA
-                : setupPoolTokens[2] == address(tokenB) ? settings.amountB : 1e18;
-            console2.log("amountsToAdd[2]", amountsToAdd[2]);
+            // vault.joinPool(poolId, owner, owner, IPool.JoinPoolRequest(assets, amountsToAdd, abi.encode(""), false));
 
-            vault.joinPool(poolId, owner, owner, IPool.JoinPoolRequest(assets, amountsToAdd, abi.encode(""), false));
+            uint256[] memory MAX_AMOUNTS = new uint256[](2);
+            MAX_AMOUNTS[0] = type(uint256).max;
+            MAX_AMOUNTS[1] = type(uint256).max;
+
+            vault.joinPool(
+                poolId,
+                owner,
+                owner,
+                IPool.JoinPoolRequest(
+                    assets, MAX_AMOUNTS, abi.encode(IPool.JoinKind.INIT, amountsToAdd), false
+                )
+            );
         }
 
         return (poolId, address(tokenA), address(tokenB));
     }
 
-    /**
-     * https://optimistic.etherscan.io/address/0xba12222222228d8ba445958a75a0704d566bf2c8#readContract
-     *     getPoolTokens
-     *     0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb200020000000000000000008b
-     *
-     *     1063322810377902132666,1394603632644752706329
-     *
-     *     getRateProviders
-     *     CL
-     *     -> getRATE
-     *     1124504367992424664
-     */
-
-    function test_wstETH_WETH() public {
+    // TODO: Need to figure out initialization of pool
+    function test_wstETH_WETHInternal() public {
         // Assumption is we always swap
         console2.log("Creating wstETH WETH Pool");
 
+        uint256 WST_ETH_BAL = 1e18;
+        uint256 WST_ETH_RATE = 1e18;
+
+        uint256 WETH_BAL = 1e18;
         uint8 DECIMALS = 18;
 
-        // Get whale
-        // Have whale donate tokens
-        address WSTETH = 0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb;
-        address WETH = 0x4200000000000000000000000000000000000006;
-
-        address WHALE = 0xc45A479877e1e9Dfe9FcD4056c699575a1045dAA;
-        vm.startPrank(WHALE);
-        tERC20(WSTETH).transfer(owner, _addDecimals(150, DECIMALS));
-        vm.stopPrank();
+        (bytes32 poolId, address WSTETH, address WETH) = _setupNewTwoTokenPool(
+            TokensAndRates(
+                WST_ETH_BAL,
+                DECIMALS,
+                WETH_BAL,
+                DECIMALS,
+                WST_ETH_RATE,
+                DECIMALS // same as rate
+            )
+        );
 
         // Let's do amounts and swaps
         // Liquidity for this pair is up to 150 WSTETH
@@ -230,7 +234,7 @@ contract BalancerStable is Test {
         amountsFromWstETH[3] = _addDecimals(100, DECIMALS);
         amountsFromWstETH[4] = _addDecimals(150, DECIMALS);
 
-        bytes32 POOL_ID = bytes32(0x7b50775383d3d6f0215a8f290f2c9e2eebbeceb200020000000000000000008b);
+        bytes32 POOL_ID = poolId;
 
         for (uint256 i; i < amountsFromWstETH.length; i++) {
             uint256 amountIn = amountsFromWstETH[i];
@@ -240,48 +244,6 @@ contract BalancerStable is Test {
             console2.log("WETH amountOut (raw)", res);
         }
     }
-
-    // TODO: Need to figure out initialization of pool
-    // function test_wstETH_WETHInternal() public {
-    //     // Assumption is we always swap
-    //     console2.log("Creating wstETH WETH Pool");
-
-    //     uint256 WST_ETH_BAL = 1063322810377902132666;
-    //     uint256 WST_ETH_RATE = 1124504367992424664;
-
-    //     uint256 WETH_BAL = 1063322810377902132666;
-    //     uint8 DECIMALS = 18;
-
-    //     (bytes32 poolId, address WSTETH, address WETH) = _setupNewTwoTokenPool(
-    //         TokensAndRates(
-    //             WST_ETH_BAL,
-    //             DECIMALS,
-    //             WETH_BAL,
-    //             DECIMALS,
-    //             WST_ETH_RATE,
-    //             DECIMALS // same as rate
-    //         )
-    //     );
-
-    //     // Let's do amounts and swaps
-    //     // Liquidity for this pair is up to 150 WSTETH
-    //     uint256[] memory amountsFromWstETH = new uint256[](5);
-    //     amountsFromWstETH[0] = _addDecimals(1, DECIMALS);
-    //     amountsFromWstETH[1] = _addDecimals(10, DECIMALS);
-    //     amountsFromWstETH[2] = _addDecimals(50, DECIMALS);
-    //     amountsFromWstETH[3] = _addDecimals(100, DECIMALS);
-    //     amountsFromWstETH[4] = _addDecimals(150, DECIMALS);
-
-    //     bytes32 POOL_ID = poolId;
-
-    //     for (uint256 i; i < amountsFromWstETH.length; i++) {
-    //         uint256 amountIn = amountsFromWstETH[i];
-    //         console2.log("wstETH i", i);
-    //         console2.log("wstETH amountIn (raw)", amountIn);
-    //         uint256 res = _balSwap(POOL_ID, owner, amountIn, WSTETH, WETH);
-    //         console2.log("WETH amountOut (raw)", res);
-    //     }
-    // }
 
     function _balSwap(bytes32 poolId, address user, uint256 amountIn, address tokenIn, address tokenOut)
         internal

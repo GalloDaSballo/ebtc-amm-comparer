@@ -12,7 +12,7 @@ import "./tERC20.sol";
  *     Tests will be less thorough, but they will demonstrate that we can match real values
  */
 
-interface IFactory {
+interface ICompostableFactory {
     function create(
         string memory name,
         string memory symbol,
@@ -20,11 +20,39 @@ interface IFactory {
         uint256 amplificationParameter,
         address[] memory rateProviders,
         uint256[] memory tokenRateCacheDurations,
-        bool exemptFromYieldProtocolFeeFlag,
+        bool exemptFromYieldProtocolFeeFlags,
         uint256 swapFeePercentage,
         address owner,
         bytes32 salt
     ) external returns (address);
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
+}
+
+interface IWeightedPoolFactory {
+    function create(
+        string memory name,
+        string memory symbol,
+        address[] memory tokens,
+        uint256[] memory normalizedWeights,
+        address[] memory rateProviders,
+        uint256 swapFeePercentage,
+        address owner,
+        bytes32 salt
+    ) external returns (address);
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT,
+        ADD_TOKEN // for Managed Pool
+    }
 }
 // Token A
 // Token B
@@ -52,13 +80,6 @@ interface IPool {
     enum SwapKind {
         GIVEN_IN,
         GIVEN_OUT
-    }
-
-    enum JoinKind {
-        INIT,
-        EXACT_TOKENS_IN_FOR_BPT_OUT,
-        TOKEN_IN_FOR_EXACT_BPT_OUT,
-        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
     }
 
     struct BatchSwapStep {
@@ -103,18 +124,8 @@ interface IPool {
 contract BalancerStable is Test {
     uint256 MAX_BPS = 10_000;
 
-    IFactory factory = IFactory(0x043A2daD730d585C44FB79D2614F295D2d625412);
+    ICompostableFactory compostableFactory = ICompostableFactory(0x043A2daD730d585C44FB79D2614F295D2d625412);
     IPool vault = IPool(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
-    bytes32 SPECIALIZATION_MASK = 0x000000000000000000000000000000000000000000020000000000000000008b;
-
-    // TODO: IGNORE
-    function fromAddressToPoolId(address pool) public returns (bytes32) {
-        bytes32 addyToBytes = bytes32(uint256(uint160(pool)) << 96);
-        // Or the result since we know that all values in the last 12 bytes for X are 0
-        // So we can append without masking since we know those are all 0s
-        return addyToBytes | SPECIALIZATION_MASK;
-    }
 
     address owner = address(123);
 
@@ -129,7 +140,7 @@ contract BalancerStable is Test {
         uint256 rateB;
     }
 
-    function _setupNewTwoTokenPool(TokensAndRates memory settings)
+    function _setupStablePool(TokensAndRates memory settings)
         internal
         returns (bytes32 poolId, address firstToken, address secondToken)
     {
@@ -146,15 +157,27 @@ contract BalancerStable is Test {
             tokens[1] = address(tokenA) > address(tokenB) ? address(tokenA) : address(tokenB);
 
             address[] memory rates = new address[](2);
-            rates[0] = address(new FakeRateProvider(settings.rateA));
-            rates[1] = address(new FakeRateProvider(settings.rateB));
+            rates[0] = address(0);
+            rates[1] = address(0);
 
             uint256[] memory durations = new uint256[](2);
-            durations[0] = 1800;
-            durations[1] = 1800;
+            durations[0] = 0;
+            durations[1] = 0;
+
 
             // Deploy new pool
-            newPool = factory.create("Pool", "POOL", tokens, 2000, rates, durations, false, 100000000000000, address(0), bytes32(uint256(123)));
+            newPool = compostableFactory.create(
+                "Pool",
+                "POOL",
+                tokens,
+                50,
+                rates,
+                durations,
+                false,
+                500000000000000,
+                address(0xBA1BA1ba1BA1bA1bA1Ba1BA1ba1BA1bA1ba1ba1B),
+                bytes32(0xa9b1420213d2145ac43d5d7334c4413d629350bd452d187a766ab8ad3d91ac75)
+            );
         }
 
         poolId = IPool(newPool).getPoolId();
@@ -164,85 +187,103 @@ contract BalancerStable is Test {
         console2.log("setupPoolTokens", setupPoolTokens.length);
         console2.log("setupPoolTokens", setupPoolTokens[0]);
         console2.log("setupPoolTokens", setupPoolTokens[1]);
+        console2.log("setupPoolTokens", setupPoolTokens[2]);
         {
             tokenA.approve(address(vault), settings.amountA);
             tokenB.approve(address(vault), settings.amountB);
 
-            address[] memory assets = new address[](2);
+            address[] memory assets = new address[](3);
             assets[0] = setupPoolTokens[0];
             assets[1] = setupPoolTokens[1];
+            assets[2] = setupPoolTokens[2];
 
+            uint256 MAX = 1e18;
 
-            uint256[] memory amountsToAdd = new uint256[](2);
+            uint256[] memory MAX_AMOUNTS = new uint256[](3);
+            MAX_AMOUNTS[0] = type(uint256).max;
+            MAX_AMOUNTS[1] = type(uint256).max;
+            MAX_AMOUNTS[2] = type(uint256).max;
+
+            uint256[] memory amountsToAdd = new uint256[](3);
             amountsToAdd[0] = setupPoolTokens[0] == address(tokenA)
                 ? settings.amountA
-                : setupPoolTokens[0] == address(tokenB) ? settings.amountB : 1e18;
+                : setupPoolTokens[0] == address(tokenB) ? settings.amountB : MAX;
             console2.log("amountsToAdd[0]", amountsToAdd[0]);
 
             amountsToAdd[1] = setupPoolTokens[1] == address(tokenA)
                 ? settings.amountA
-                : setupPoolTokens[1] == address(tokenB) ? settings.amountB : 1e18;
+                : setupPoolTokens[1] == address(tokenB) ? settings.amountB : MAX;
             console2.log("amountsToAdd[1]", amountsToAdd[1]);
 
-            // vault.joinPool(poolId, owner, owner, IPool.JoinPoolRequest(assets, amountsToAdd, abi.encode(""), false));
+            amountsToAdd[2] = setupPoolTokens[2] == address(tokenA)
+                ? settings.amountA
+                : setupPoolTokens[2] == address(tokenB) ? settings.amountB : MAX;
+            console2.log("amountsToAdd[2]", amountsToAdd[2]);
 
-            uint256[] memory MAX_AMOUNTS = new uint256[](2);
-            MAX_AMOUNTS[0] = type(uint256).max;
-            MAX_AMOUNTS[1] = type(uint256).max;
+            // Abi encode of INIT VALUE
+            // [THE 3 AMOUNTS we already wrote]
 
+            // We are pranking owner so this is ok
             vault.joinPool(
                 poolId,
                 owner,
                 owner,
                 IPool.JoinPoolRequest(
-                    assets, MAX_AMOUNTS, abi.encode(IPool.JoinKind.INIT, amountsToAdd), false
+                    assets, MAX_AMOUNTS, abi.encode(ICompostableFactory.JoinKind.INIT, amountsToAdd), false
                 )
             );
         }
 
+        (, uint256[] memory balancesAfterJoin,) = vault.getPoolTokens(poolId);
+
+        for (uint256 i = 0; i < balancesAfterJoin.length; i++) {
+            console2.log("balancesAfterJoin stable pool", balancesAfterJoin[i]);
+        }
+
+        vm.stopPrank();
+
         return (poolId, address(tokenA), address(tokenB));
     }
 
-    // TODO: Need to figure out initialization of pool
-    function test_wstETH_WETHInternal() public {
+    uint256 constant EBTC_IN = 100e18; // 5e18 eBTC
+    uint256 constant EBTC_TO_WBTC = 1e18; // 1 to 1
+
+
+    function test_EBTC_WBTC_Compostable() public {
         // Assumption is we always swap
-        console2.log("Creating wstETH WETH Pool");
+        
+        uint256 WBTC_IN = EBTC_IN * EBTC_TO_WBTC / 1e18;
 
-        uint256 WST_ETH_BAL = 1e18;
-        uint256 WST_ETH_RATE = 1e18;
-
-        uint256 WETH_BAL = 1e18;
+        uint256 RATE = 1e18;
         uint8 DECIMALS = 18;
 
-        (bytes32 poolId, address WSTETH, address WETH) = _setupNewTwoTokenPool(
+        (bytes32 poolId, address EBTC, address WBTC) = _setupStablePool(
             TokensAndRates(
-                WST_ETH_BAL,
+                EBTC_IN,
                 DECIMALS,
-                WETH_BAL,
+                WBTC_IN,
                 DECIMALS,
-                WST_ETH_RATE,
-                DECIMALS // same as rate
+                RATE,
+                RATE
             )
         );
 
-        // Let's do amounts and swaps
-        // Liquidity for this pair is up to 150 WSTETH
-        uint256[] memory amountsFromWstETH = new uint256[](5);
-        amountsFromWstETH[0] = _addDecimals(1, DECIMALS);
-        amountsFromWstETH[1] = _addDecimals(10, DECIMALS);
-        amountsFromWstETH[2] = _addDecimals(50, DECIMALS);
-        amountsFromWstETH[3] = _addDecimals(100, DECIMALS);
-        amountsFromWstETH[4] = _addDecimals(150, DECIMALS);
 
-        bytes32 POOL_ID = poolId;
+        console2.log("");
+        console2.log("");
+        console2.log("From EBTC to WBTC (simmetric)");
 
-        for (uint256 i; i < amountsFromWstETH.length; i++) {
-            uint256 amountIn = amountsFromWstETH[i];
-            console2.log("wstETH i", i);
-            console2.log("wstETH amountIn (raw)", amountIn);
-            uint256 res = _balSwap(POOL_ID, owner, amountIn, WSTETH, WETH);
-            console2.log("WETH amountOut (raw)", res);
+        uint256 max = WBTC_IN * 3;
+        uint256 step = WBTC_IN / 100;
+        uint256 amt_in = step;
+        while(amt_in < max) {
+            console2.log("");
+             _balSwap(poolId, owner, amt_in, EBTC, WBTC);
+             amt_in += step;
         }
+        
+
+
     }
 
     function _balSwap(bytes32 poolId, address user, uint256 amountIn, address tokenIn, address tokenOut)
@@ -266,6 +307,8 @@ contract BalancerStable is Test {
         tokens[0] = tokenIn;
         tokens[1] = tokenOut;
 
+        console2.log("amountIn", amountIn);
+
         int256[] memory res = vault.queryBatchSwap(
             IPool.SwapKind.GIVEN_IN, steps, tokens, IPool.FundManagement(user, false, payable(user), false)
         );
@@ -277,7 +320,11 @@ contract BalancerStable is Test {
             revert("invalid result");
         }
 
-        return uint256(-res[1]);
+        uint256 amtOut = uint256(-res[1]);
+        console2.log("AmountOut", amtOut);
+        console2.log("Amt Out * 100 / Amt In", amtOut * 100 / amountIn);
+
+        return amtOut;
     }
 
     function _addDecimals(uint256 value, uint256 decimals) internal pure returns (uint256) {

@@ -79,7 +79,7 @@ contract UniV3ForkFixture is Test {
     // NOTE: Change this to change rest of settings
     // Run with: TODO
 
-    uint256 constant EBTC_IN = 5_000e18; // 5e18 eBTC
+    uint256 constant EBTC_IN = 100e18; // 5e18 eBTC
     uint256 constant EBTC_TO_WBTC = 1e18; // 1 to 1
     int24 constant TICK_SPACING = 60; // Souce: Docs
     int24 constant TICK_RANGE_MULTIPLIER = 2; // 1.0001^1000 = around 10%, which is sloppy enough, for conc liquidity
@@ -289,31 +289,13 @@ contract UniV3ForkFixture is Test {
 
         // Swap Here
         // eBTC to wBTC
-        _swapAndRevert(newPool, token0, token1, 100e18);
-        _swapAndRevert(newPool, token0, token1, 1_000e18);
-        _swapAndRevert(newPool, token0, token1, 2_000e18);
-        _swapAndRevert(newPool, token0, token1, 3_000e18);
-        _swapAndRevert(newPool, token0, token1, 4_000e18);
-        _swapAndRevert(newPool, token0, token1, 5_000e18);
-        _swapAndRevert(newPool, token0, token1, 6_000e18);
-        _swapAndRevert(newPool, token0, token1, 7_000e18);
-        _swapAndRevert(newPool, token0, token1, 8_000e18);
-        _swapAndRevert(newPool, token0, token1, 9_000e18);
-        _swapAndRevert(newPool, token0, token1, 10_000e18);
-
-        // wBTC to eBTC
-        _swapAndRevert(newPool, token1, token0, 100e18);
-        _swapAndRevert(newPool, token1, token0, 1_000e18);
-        _swapAndRevert(newPool, token1, token0, 2_000e18);
-        _swapAndRevert(newPool, token1, token0, 3_000e18);
-        _swapAndRevert(newPool, token1, token0, 4_000e18);
-        _swapAndRevert(newPool, token1, token0, 5_000e18);
-        _swapAndRevert(newPool, token1, token0, 6_000e18);
-        _swapAndRevert(newPool, token1, token0, 7_000e18);
-        _swapAndRevert(newPool, token1, token0, 8_000e18);
-        _swapAndRevert(newPool, token1, token0, 9_000e18);
-        _swapAndRevert(newPool, token1, token0, 10_000e18);
-
+        uint256 max = WBTC_IN * 3;
+        uint256 step = WBTC_IN / 100;
+        uint256 min = step;
+        while(min < max) {
+             _swapAndRevert(newPool, token0, token1, min);
+             min += step;
+        }
 
         // Determine Price from Tick0
         console2.log("Ratio", translator.getRatioGivenSqrtPriceX96(translator.getSqrtRatioAtTick((IUnIV3Pool(newPool).slot0()).tick)));

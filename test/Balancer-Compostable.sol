@@ -11,7 +11,6 @@ import "./tERC20.sol";
  *     This means we are just getting the spot liquidity values
  *     Tests will be less thorough, but they will demonstrate that we can match real values
  */
-
 interface ICompostableFactory {
     function create(
         string memory name,
@@ -52,6 +51,7 @@ interface IWeightedPoolFactory {
         TOKEN_IN_FOR_EXACT_BPT_OUT,
         ALL_TOKENS_IN_FOR_EXACT_BPT_OUT,
         ADD_TOKEN // for Managed Pool
+
     }
 }
 // Token A
@@ -164,7 +164,6 @@ contract BalancerStable is Test {
             durations[0] = 0;
             durations[1] = 0;
 
-
             // Deploy new pool
             newPool = compostableFactory.create(
                 "Pool",
@@ -248,26 +247,16 @@ contract BalancerStable is Test {
     uint256 constant EBTC_IN = 100e18; // 5e18 eBTC
     uint256 constant EBTC_TO_WBTC = 1e18; // 1 to 1
 
-
     function test_EBTC_WBTC_Compostable() public {
         // Assumption is we always swap
-        
+
         uint256 WBTC_IN = EBTC_IN * EBTC_TO_WBTC / 1e18;
 
         uint256 RATE = 1e18;
         uint8 DECIMALS = 18;
 
-        (bytes32 poolId, address EBTC, address WBTC) = _setupStablePool(
-            TokensAndRates(
-                EBTC_IN,
-                DECIMALS,
-                WBTC_IN,
-                DECIMALS,
-                RATE,
-                RATE
-            )
-        );
-
+        (bytes32 poolId, address EBTC, address WBTC) =
+            _setupStablePool(TokensAndRates(EBTC_IN, DECIMALS, WBTC_IN, DECIMALS, RATE, RATE));
 
         console2.log("");
         console2.log("");
@@ -276,14 +265,11 @@ contract BalancerStable is Test {
         uint256 max = WBTC_IN * 3;
         uint256 step = WBTC_IN / 100;
         uint256 amt_in = step;
-        while(amt_in < max) {
+        while (amt_in < max) {
             console2.log("");
-             _balSwap(poolId, owner, amt_in, EBTC, WBTC);
-             amt_in += step;
+            _balSwap(poolId, owner, amt_in, EBTC, WBTC);
+            amt_in += step;
         }
-        
-
-
     }
 
     function _balSwap(bytes32 poolId, address user, uint256 amountIn, address tokenIn, address tokenOut)

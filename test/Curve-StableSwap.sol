@@ -102,7 +102,6 @@ contract CurveStable is Test {
         return (newPool, address(tokenA), address(tokenB));
     }
 
-
     function test_eBTC_wBTC() public {
         console2.log("Creating eBTC-wBTC Pool");
         uint256 EBTC_IN = 5_000e18;
@@ -162,8 +161,6 @@ contract CurveStable is Test {
 
         console2.log("amtOut * 100 / amtIn", amtOut * 100 / amtIn);
     }
-
-
 
     function _addDecimals(uint256 value, uint256 decimals) internal pure returns (uint256) {
         return value * 10 ** decimals;

@@ -89,11 +89,10 @@ contract UniV3ForkFixture is Test {
     // Then we set the price and the ticks
     // We LP and we simulate assuming a 50/50 LP ratio
     // == NOTE: ONLY CHANGE ABOVE HERE ==//
-    
+
     address constant WHALE = address(0xb453d);
 
     uint24 constant DEFAULT_FEE = 3000;
-    
 
     // Deploy new pool
     IUniV3Factory constant UNIV3_FACTORY = IUniV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
@@ -275,11 +274,15 @@ contract UniV3ForkFixture is Test {
         console2.log("WBTC_IN", WBTC_IN);
 
         // Deploy a Pool, with 1/1 LP in, and 1 tick left and 1 tick right from the middle
-        (address newPool, address token0, address token1) = _createNewPool(WBTC_IN, EBTC_IN, TICK_RANGE_MULTIPLIER, TICK_RANGE_MULTIPLIER);
+        (address newPool, address token0, address token1) =
+            _createNewPool(WBTC_IN, EBTC_IN, TICK_RANGE_MULTIPLIER, TICK_RANGE_MULTIPLIER);
 
         int24 middleTick = (IUnIV3Pool(newPool).slot0()).tick / TICK_SPACING * TICK_SPACING; // Avoid non %
 
-        console2.log("Original Ratio", translator.getRatioGivenSqrtPriceX96(translator.getSqrtRatioAtTick((IUnIV3Pool(newPool).slot0()).tick)));
+        console2.log(
+            "Original Ratio",
+            translator.getRatioGivenSqrtPriceX96(translator.getSqrtRatioAtTick((IUnIV3Pool(newPool).slot0()).tick))
+        );
 
         console2.log("");
         console2.log("## BEFORE ##");
@@ -292,13 +295,15 @@ contract UniV3ForkFixture is Test {
         uint256 max = WBTC_IN * 3;
         uint256 step = WBTC_IN / 100;
         uint256 min = step;
-        while(min < max) {
-             _swapAndRevert(newPool, token0, token1, min);
-             min += step;
+        while (min < max) {
+            _swapAndRevert(newPool, token0, token1, min);
+            min += step;
         }
 
         // Determine Price from Tick0
-        console2.log("Ratio", translator.getRatioGivenSqrtPriceX96(translator.getSqrtRatioAtTick((IUnIV3Pool(newPool).slot0()).tick)));
+        console2.log(
+            "Ratio",
+            translator.getRatioGivenSqrtPriceX96(translator.getSqrtRatioAtTick((IUnIV3Pool(newPool).slot0()).tick))
+        );
     }
-
 }
